@@ -30,6 +30,9 @@ tests/fixtures/KPOINTS
 tests/fixtures/POSCAR
 tests/fixtures/qscript.sh
 
+# Bundled binary (built in CI, not committed)
+vaspsetup_core/bin/
+
 # Development docs (local only, not for GitHub)
 CLAUDE.md
 DESIGN.md

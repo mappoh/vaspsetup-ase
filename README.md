@@ -4,16 +4,19 @@ Terminal UI for setting up and submitting VASP calculations to an SGE cluster.
 
 ## Installation
 
-Download the latest release from the [Releases page](https://github.com/mappoh/vaspsetup-ase/releases) and extract:
-
 ```bash
-tar xzf vaspsetup-v0.2.0-linux-x86_64.tar.gz
+uv install vaspsetup-ase
 ```
 
-### Requirements
+Or with pip:
 
-- Python 3.9+ with ASE (`pip install ase`)
-- SGE cluster with `qsub`
+```bash
+pip install vaspsetup-ase
+```
+
+Requires Python 3.9+ and ASE (installed automatically as a dependency).
+
+Pre-built binaries are also available on the [Releases page](https://github.com/mappoh/vaspsetup-ase/releases).
 
 ## Usage
 
@@ -21,14 +24,6 @@ Navigate to a directory containing structure files (POSCAR, .cif, .vasp, .xyz), 
 
 ```bash
 ./vaspsetup
-```
-
-The `vaspsetup_core/` directory must be alongside the binary.
-
-## Build from source
-
-```bash
-cargo build --release
 ```
 
 ## Supported Calculations

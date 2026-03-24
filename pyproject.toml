@@ -28,6 +28,9 @@ dependencies = [
     "numpy>=1.24",
 ]
 
+[project.scripts]
+vaspsetup = "vaspsetup_core._cli:main"
+
 [project.optional-dependencies]
 dev = ["pytest", "pytest-cov"]
 
@@ -35,7 +38,7 @@ dev = ["pytest", "pytest-cov"]
 include = ["vaspsetup_core*"]
 
 [tool.setuptools.package-data]
-vaspsetup_core = ["presets/*.json"]
+vaspsetup_core = ["presets/*.json", "bin/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests/python"]

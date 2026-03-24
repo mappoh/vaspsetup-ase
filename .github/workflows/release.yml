@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   build-linux:
@@ -19,37 +20,61 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Build release binary
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install build tools
+        run: pip install build twine
+
+      - name: Build Rust binary
         run: cargo build --release
 
-      - name: Package binary with Python backend
+      - name: Bundle binary into Python package
         run: |
-          mkdir -p dist
-          cp target/release/vaspsetup dist/
-          cp -r vaspsetup_core dist/
+          mkdir -p vaspsetup_core/bin
+          cp target/release/vaspsetup vaspsetup_core/bin/
+          chmod +x vaspsetup_core/bin/vaspsetup
+
+      - name: Build Python wheel
+        run: python -m build --wheel
+
+      - name: Tag wheel as manylinux
+        run: |
+          pip install wheel
           cd dist
+          for f in *.whl; do
+            # Rename from py3-none-any to py3-none-manylinux_2_17_x86_64
+            newname=$(echo "$f" | sed 's/py3-none-any/py3-none-manylinux_2_17_x86_64.manylinux2014_x86_64/')
+            mv "$f" "$newname"
+          done
+
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: twine upload dist/*.whl
+
+      - name: Package tarball for GitHub Release
+        run: |
+          mkdir -p release
+          cp target/release/vaspsetup release/
+          cp -r vaspsetup_core release/
+          cd release
           tar czf "../vaspsetup-${TAG_NAME}-linux-x86_64.tar.gz" vaspsetup vaspsetup_core/
 
-      - name: Create Release
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: "vaspsetup-${{ env.TAG_NAME }}-linux-x86_64.tar.gz"
           body: |
-            ## Installation
+            ## Install
 
-            1. Download and extract:
             ```bash
-            tar xzf vaspsetup-linux-x86_64.tar.gz
+            uv install vaspsetup-ase
             ```
 
-            2. Ensure Python 3.9+ with ASE is available:
-            ```bash
-            pip install ase
-            ```
+            Or download the tarball and run directly.
 
-            3. Run from a directory with structure files:
-            ```bash
-            ./vaspsetup
-            ```
-
-            The `vaspsetup_core/` directory must be alongside the binary.
+            Requires Python 3.9+ with ASE (`pip install ase`).
