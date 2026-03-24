@@ -1,23 +1,32 @@
-"""CLI entry point — locates and launches the bundled Rust binary."""
+"""CLI entry point — locates or downloads the Rust binary, then launches it."""
 
 import os
 import platform
 import stat
 import sys
+import tarfile
+import urllib.request
 from pathlib import Path
+
+REPO = "mappoh/vaspsetup-ase"
+VERSION = "v0.2.0"
+
+
+def _bin_dir() -> Path:
+    """Directory where the binary is cached."""
+    cache = Path.home() / ".cache" / "vaspsetup"
+    cache.mkdir(parents=True, exist_ok=True)
+    return cache
 
 
 def _find_binary() -> Path:
-    """Find the vaspsetup binary bundled in this package."""
-    # Check package's bin/ directory (installed via pip/uv)
-    pkg_bin = Path(__file__).parent / "bin" / "vaspsetup"
-    if pkg_bin.is_file():
-        # Ensure executable permission
-        if not os.access(pkg_bin, os.X_OK):
-            pkg_bin.chmod(pkg_bin.stat().st_mode | stat.S_IEXEC)
-        return pkg_bin
+    """Find or download the vaspsetup binary."""
+    # 1. Check cached binary
+    cached = _bin_dir() / "vaspsetup"
+    if cached.is_file() and os.access(cached, os.X_OK):
+        return cached
 
-    # Check project root (development: cargo build)
+    # 2. Check development build (cargo build)
     project_root = Path(__file__).parent.parent
     for candidate in [
         project_root / "target" / "release" / "vaspsetup",
@@ -26,13 +35,57 @@ def _find_binary() -> Path:
         if candidate.is_file():
             return candidate
 
-    print(
-        "Error: vaspsetup binary not found.\n"
-        "If developing, run: cargo build --release\n"
-        "If installed via pip/uv, the package may be missing the binary for your platform.",
-        file=sys.stderr,
+    # 3. Download from GitHub Releases
+    return _download_binary()
+
+
+def _download_binary() -> Path:
+    """Download the pre-built binary from GitHub Releases."""
+    system = platform.system().lower()
+    machine = platform.machine().lower()
+
+    if system != "linux" or machine not in ("x86_64", "amd64"):
+        print(
+            f"Error: No pre-built binary for {system}/{machine}.\n"
+            "Build from source: cargo build --release",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+    url = (
+        f"https://github.com/{REPO}/releases/download/{VERSION}/"
+        f"vaspsetup-{VERSION}-linux-x86_64.tar.gz"
     )
-    sys.exit(1)
+
+    dest = _bin_dir() / "vaspsetup"
+    tarball = _bin_dir() / "vaspsetup.tar.gz"
+
+    print(f"Downloading vaspsetup {VERSION}...", file=sys.stderr)
+    try:
+        urllib.request.urlretrieve(url, tarball)
+    except Exception as e:
+        print(f"Error: Failed to download binary: {e}", file=sys.stderr)
+        print(f"URL: {url}", file=sys.stderr)
+        print("Build from source: cargo build --release", file=sys.stderr)
+        sys.exit(1)
+
+    # Extract just the binary from the tarball
+    try:
+        with tarfile.open(tarball, "r:gz") as tar:
+            member = tar.getmember("vaspsetup")
+            f = tar.extractfile(member)
+            if f is None:
+                raise RuntimeError("vaspsetup not found in tarball")
+            dest.write_bytes(f.read())
+            dest.chmod(dest.stat().st_mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+    except Exception as e:
+        print(f"Error: Failed to extract binary: {e}", file=sys.stderr)
+        sys.exit(1)
+    finally:
+        tarball.unlink(missing_ok=True)
+
+    print(f"Installed to {dest}", file=sys.stderr)
+    return dest
 
 
 def main():

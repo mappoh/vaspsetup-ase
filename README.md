@@ -5,18 +5,18 @@ Terminal UI for setting up and submitting VASP calculations to an SGE cluster.
 ## Installation
 
 ```bash
-uv install vaspsetup-ase
+uv pip install git+https://github.com/mappoh/vaspsetup-ase.git
 ```
 
 Or with pip:
 
 ```bash
-pip install vaspsetup-ase
+pip install git+https://github.com/mappoh/vaspsetup-ase.git
 ```
 
-Requires Python 3.9+ and ASE (installed automatically as a dependency).
+On first run, the binary is automatically downloaded from GitHub Releases.
 
-Pre-built binaries are also available on the [Releases page](https://github.com/mappoh/vaspsetup-ase/releases).
+Requires Python 3.9+ (ASE is installed automatically as a dependency).
 
 ## Usage
 
