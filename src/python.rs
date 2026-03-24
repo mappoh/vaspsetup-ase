@@ -8,7 +8,30 @@
 
 use serde_json::Value;
 use std::io::Write;
+use std::path::PathBuf;
 use std::process::{Command, Stdio};
+
+/// Find the project root containing `vaspsetup_core/`.
+/// Checks: executable's ancestor dirs, then current dir.
+fn find_project_root() -> Option<PathBuf> {
+    // Try relative to the executable (handles target/release/vaspsetup or target/debug/vaspsetup)
+    if let Ok(exe) = std::env::current_exe() {
+        let mut dir = exe.parent().map(|p| p.to_path_buf());
+        while let Some(d) = dir {
+            if d.join("vaspsetup_core").is_dir() {
+                return Some(d);
+            }
+            dir = d.parent().map(|p| p.to_path_buf());
+        }
+    }
+    // Fall back to current directory
+    if let Ok(cwd) = std::env::current_dir() {
+        if cwd.join("vaspsetup_core").is_dir() {
+            return Some(cwd);
+        }
+    }
+    None
+}
 
 /// Find a Python >= 3.9 executable. Tries "python" first, then "python3".
 fn find_python() -> &'static str {
@@ -77,7 +100,7 @@ impl std::fmt::Display for PythonError {
                 write!(f, "Python not found. Install Python 3.9+.")
             }
             PythonError::ModuleNotFound => {
-                write!(f, "vaspsetup_core not installed. Run: pip install vaspsetup-ase")
+                write!(f, "vaspsetup_core not found. Ensure the binary is run from the project directory or vaspsetup_core/ is alongside the executable.")
             }
             PythonError::ProcessFailed(msg) => {
                 write!(f, "Python backend failed: {}", msg)
@@ -106,12 +129,18 @@ pub fn call_python(command: &str, args: Value) -> Result<Value, PythonError> {
         "args": args,
     });
 
-    let mut child = Command::new(find_python())
-        .args(["-m", "vaspsetup_core"])
+    let mut cmd = Command::new(find_python());
+    cmd.args(["-m", "vaspsetup_core"])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
+        .stderr(Stdio::piped());
+
+    // Set PYTHONPATH so vaspsetup_core can be found without pip install
+    if let Some(root) = find_project_root() {
+        cmd.env("PYTHONPATH", root);
+    }
+
+    let mut child = cmd.spawn()
         .map_err(|_| PythonError::NotInstalled)?;
 
     // Write request to stdin and close it (triggers EOF for Python's stdin.read())

@@ -12,7 +12,6 @@ Terminal UI for setting up and submitting VASP calculations to an SGE cluster.
 
 ```bash
 cargo build --release
-pip install -e .
 ```
 
 ## Usage
