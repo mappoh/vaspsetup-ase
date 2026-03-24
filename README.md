@@ -7,7 +7,7 @@ Terminal UI for setting up and submitting VASP calculations to an SGE cluster.
 Download the latest release from the [Releases page](https://github.com/mappoh/vaspsetup-ase/releases) and extract:
 
 ```bash
-tar xzf vaspsetup-v*-linux-x86_64.tar.gz
+tar xzf vaspsetup-v0.2.0-linux-x86_64.tar.gz
 ```
 
 ### Requirements
