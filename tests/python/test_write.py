@@ -81,18 +81,20 @@ class TestWriteVaspInputs:
         content = open(os.path.join(tmp_output, "KPOINTS")).read()
         assert "4  4  4" in content
 
-    def test_poscar_preserves_atom_order(self, poscar_fe2o3, tmp_output):
-        """POSCAR preserves input atom order (sort=False)."""
+    def test_poscar_groups_species(self, poscar_fe2o3, tmp_output):
+        """POSCAR groups atoms by species (sort=True for VASP/POTCAR compat)."""
         params = {"ENCUT": 520}
         write_vasp_inputs(poscar_fe2o3, tmp_output, params)
 
         content = open(os.path.join(tmp_output, "POSCAR")).read()
         lines = content.strip().split("\n")
-        # Species line should have Fe before O (matching input order)
         species_line = lines[5].strip()
         symbols = species_line.split()
+        # Sorted alphabetically: Fe before O
         assert symbols[0] == "Fe"
         assert symbols[1] == "O"
+        # Each species appears exactly once (no duplicates from non-contiguous groups)
+        assert len(symbols) == len(set(symbols))
 
     def test_creates_output_dir(self, poscar_simple, tmp_output):
         """Output directory is created if it doesn't exist."""

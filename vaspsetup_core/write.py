@@ -11,7 +11,6 @@ import tempfile
 import shutil
 
 from ase.io.vasp import write_vasp
-from ase.calculators.vasp import Vasp
 
 from vaspsetup_core import WriteError
 from vaspsetup_core.io import read_structure
@@ -86,9 +85,9 @@ def write_vasp_inputs(poscar_path, output_dir, params, kpts=(1, 1, 1)):
 
 
 def _write_poscar(atoms, directory):
-    """Write POSCAR from ASE Atoms object. Preserves input atom order."""
+    """Write POSCAR from ASE Atoms object. Sorts by species for VASP compatibility."""
     path = os.path.join(directory, "POSCAR")
-    write_vasp(path, atoms, direct=True, sort=False)
+    write_vasp(path, atoms, direct=True, sort=True)
 
 
 def _write_incar(params, directory):
@@ -108,7 +107,11 @@ def _write_incar(params, directory):
 
 
 def _write_potcar(atoms, directory, pp_type="pbe"):
-    """Write POTCAR using ASE's Vasp calculator.
+    """Write POTCAR by concatenating per-species files from VASP_PP_PATH.
+
+    Uses ASE's Vasp calculator which handles setups, suffixes, and
+    compressed (.Z) files automatically. Species order matches POSCAR
+    (atoms are sorted by species before both POSCAR and POTCAR are written).
 
     Returns True if POTCAR was written, False if VASP_PP_PATH is not set.
     Raises WriteError if VASP_PP_PATH is set but a species POTCAR is missing.
@@ -117,6 +120,7 @@ def _write_potcar(atoms, directory, pp_type="pbe"):
         return False
 
     try:
+        from ase.calculators.vasp import Vasp
         calc = Vasp(pp=pp_type)
         calc.initialize(atoms)
         calc.write_potcar(directory=directory)
