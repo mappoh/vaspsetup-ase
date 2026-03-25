@@ -28,14 +28,12 @@ pub fn render_sge_script(
     cores: u32,
     parallel_env: &str,
     vasp_module: &str,
-    work_dir: &str,
     vasp_cmd: &str,
 ) -> Result<String, String> {
     validate_script_param(job_name, "job_name")?;
     validate_script_param(queue, "queue")?;
     validate_script_param(parallel_env, "parallel_env")?;
     validate_script_param(vasp_module, "vasp_module")?;
-    validate_script_param(work_dir, "work_dir")?;
     validate_script_param(vasp_cmd, "vasp_cmd")?;
 
     Ok(format!(
@@ -44,10 +42,7 @@ pub fn render_sge_script(
          #$ -q {queue}\n\
          #$ -pe {parallel_env} {cores}\n\
          #$ -cwd\n\
-         #$ -o {work_dir}\n\
-         #$ -e {work_dir}\n\
          module load {vasp_module}\n\
-         cd {work_dir}\n\
          mpirun -np $NSLOTS {vasp_cmd}\n"
     ))
 }
@@ -59,9 +54,13 @@ pub fn write_submission_script(dir: &Path, content: &str) -> std::io::Result<std
     Ok(script_path)
 }
 
-/// Execute qsub on a submission script. Parse the result.
-pub fn run_qsub(script_path: &Path) -> QsubResult {
-    let result = Command::new("qsub").arg(script_path).output();
+/// Execute qsub on a submission script from the given working directory.
+/// SGE's `-cwd` directive will use this directory for output files.
+pub fn run_qsub(script_path: &Path, work_dir: &Path) -> QsubResult {
+    let result = Command::new("qsub")
+        .arg(script_path)
+        .current_dir(work_dir)
+        .output();
 
     match result {
         Err(e) => QsubResult {
@@ -162,33 +161,23 @@ mod tests {
     #[test]
     fn test_render_sge_script() {
         let script = render_sge_script(
-            "test_job", "long", 64, "mpi-*", "vasp/6.4.0/", "/work/calc", "vasp_std",
+            "test_job", "long", 64, "mpi-*", "vasp/6.4.0/", "vasp_std",
         )
         .unwrap();
         assert!(script.contains("#$ -N test_job"));
         assert!(script.contains("#$ -q long"));
         assert!(script.contains("#$ -pe mpi-* 64"));
-        assert!(script.contains("#$ -o /work/calc"));
-        assert!(script.contains("#$ -e /work/calc"));
+        assert!(script.contains("#$ -cwd"));
         assert!(script.contains("module load vasp/6.4.0/"));
-        assert!(script.contains("cd /work/calc"));
         assert!(script.contains("mpirun -np $NSLOTS vasp_std"));
-    }
-
-    #[test]
-    fn test_render_sge_script_injection_blocked() {
-        let result = render_sge_script(
-            "test", "long", 64, "mpi-*", "vasp/6.4.0/",
-            "/work\nrm -rf /", "vasp_std",
-        );
-        assert!(result.is_err());
-        assert!(result.unwrap_err().contains("newline"));
+        // Script should NOT contain any absolute paths — qsub runs from work_dir
+        assert!(!script.contains("/work"));
     }
 
     #[test]
     fn test_render_sge_script_neb() {
         let script = render_sge_script(
-            "neb_job", "short", 32, "mpi-*", "vasp/6.4.0/", "/work/neb", "vasp_neb",
+            "neb_job", "short", 32, "mpi-*", "vasp/6.4.0/", "vasp_neb",
         )
         .unwrap();
         assert!(script.contains("vasp_neb"));

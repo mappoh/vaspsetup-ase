@@ -543,7 +543,7 @@ impl App {
         vasp_binary: &str,
     ) -> JobResult {
         let script_content = match shell::render_sge_script(
-            job_name, queue, cores, parallel_env, vasp_module, output_dir, vasp_binary,
+            job_name, queue, cores, parallel_env, vasp_module, vasp_binary,
         ) {
             Ok(content) => content,
             Err(e) => {
@@ -572,7 +572,7 @@ impl App {
             }
         };
 
-        let qsub_result = shell::run_qsub(&script_path);
+        let qsub_result = shell::run_qsub(&script_path, output_path);
         JobResult {
             job_name: job_name.to_string(),
             success: qsub_result.success,
