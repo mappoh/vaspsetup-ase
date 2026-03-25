@@ -308,19 +308,18 @@ impl SubmitSetupScreen {
                 self.focus = idx;
                 return ScreenAction::Continue;
             }
-            // Resolve to absolute, canonicalized path
+            // Resolve to clean absolute path
             let path = std::path::Path::new(&output_dir);
             let abs_path = if path.is_absolute() {
                 path.to_path_buf()
             } else {
                 state.work_dir.join(&output_dir)
             };
-            // Canonicalize removes ./ and ../ components; fall back to raw join
-            state.output_dir = abs_path
-                .canonicalize()
-                .unwrap_or(abs_path)
-                .to_string_lossy()
-                .to_string();
+            // Rebuild path from components to remove . and normalize slashes
+            let clean: std::path::PathBuf = abs_path
+                .components()
+                .collect();
+            state.output_dir = clean.to_string_lossy().to_string();
         } else {
             // Quick Submit: use work_dir
             state.output_dir = state.work_dir.to_string_lossy().to_string();
