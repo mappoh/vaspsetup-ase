@@ -43,6 +43,11 @@ def write_vasp_inputs(poscar_path, output_dir, params, kpts=(1, 1, 1)):
     """
     atoms = read_structure(poscar_path)
 
+    # Sort atoms by chemical symbol so species are grouped.
+    # This ensures POSCAR and POTCAR have the same species order.
+    sort_indices = sorted(range(len(atoms)), key=lambda i: atoms[i].symbol)
+    atoms = atoms[sort_indices]
+
     # Create output_dir first so temp dir is on the same filesystem
     os.makedirs(output_dir, exist_ok=True)
     tmp_dir = tempfile.mkdtemp(prefix="vaspsetup_", dir=output_dir)
@@ -85,9 +90,9 @@ def write_vasp_inputs(poscar_path, output_dir, params, kpts=(1, 1, 1)):
 
 
 def _write_poscar(atoms, directory):
-    """Write POSCAR from ASE Atoms object. Sorts by species for VASP compatibility."""
+    """Write POSCAR from ASE Atoms object. Atoms are pre-sorted by symbol."""
     path = os.path.join(directory, "POSCAR")
-    write_vasp(path, atoms, direct=True, sort=True)
+    write_vasp(path, atoms, direct=True, sort=False)
 
 
 def _write_incar(params, directory):
