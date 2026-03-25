@@ -314,6 +314,7 @@ impl App {
                 // species data matches what the user actually selected in FilePick
                 self.load_atom_info_for_selected();
                 self.edit_incar = screens::edit_incar::EditIncarScreen::new(&self.state);
+                self.state.error = None; // Clear after screen picks it up
             }
             ActiveScreen::EditKpoints => {
                 self.edit_kpoints = screens::edit_kpoints::EditKpointsScreen::new(&self.state);
@@ -349,8 +350,7 @@ impl App {
                 }
             }
             Err(e) => {
-                // TODO: show error on screen instead of silently failing
-                eprintln!("Failed to load preset: {}", e);
+                self.state.error = Some(format!("Failed to load preset '{}': {}", preset_name, e));
             }
         }
     }

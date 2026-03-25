@@ -105,7 +105,7 @@ impl EditIncarScreen {
             add_key: String::new(),
             grid_row: 0,
             grid_col: 0,
-            error: None,
+            error: state.error.clone(),
         }
     }
 

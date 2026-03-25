@@ -43,21 +43,43 @@ impl Default for Config {
 
 impl Config {
     /// Load config from ~/.vaspsetup/config.json, or create default.
-    pub fn load() -> Self {
+    /// Returns (config, warning) — warning is set if the file existed but had invalid JSON.
+    pub fn load() -> (Self, Option<String>) {
         let path = Self::config_path();
+        Self::load_from(&path)
+    }
 
+    /// Load config from a specific path. Testable version of `load()`.
+    fn load_from(path: &PathBuf) -> (Self, Option<String>) {
         if path.exists() {
-            if let Ok(content) = fs::read_to_string(&path) {
-                if let Ok(config) = serde_json::from_str::<Config>(&content) {
-                    return config;
+            match fs::read_to_string(path) {
+                Ok(content) => match serde_json::from_str::<Config>(&content) {
+                    Ok(config) => return (config, None),
+                    Err(e) => {
+                        // File exists but has invalid JSON — use defaults, do NOT overwrite
+                        let warning = format!(
+                            "Warning: {} has invalid JSON ({}). Using defaults.",
+                            path.display(),
+                            e
+                        );
+                        return (Config::default(), Some(warning));
+                    }
+                },
+                Err(e) => {
+                    let warning = format!(
+                        "Warning: Could not read {} ({}). Using defaults.",
+                        path.display(),
+                        e
+                    );
+                    return (Config::default(), Some(warning));
                 }
             }
         }
 
-        // Write default config for next time
+        // File doesn't exist — write default config for next time
         let config = Config::default();
-        config.save_default(&path);
-        config
+        config.save_default(path);
+        (config, None)
     }
 
     /// Path to the config file.
@@ -82,6 +104,7 @@ impl Config {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
 
     #[test]
     fn test_default_values() {
@@ -99,5 +122,68 @@ mod tests {
         let parsed: Config = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.cluster.default_queue, "long");
         assert_eq!(parsed.cluster.default_cores, 64);
+    }
+
+    #[test]
+    fn test_load_valid_config_file() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.json");
+
+        // Write a valid config with custom values
+        let mut custom = Config::default();
+        custom.cluster.default_queue = "short".into();
+        custom.cluster.default_cores = 128;
+        let json = serde_json::to_string_pretty(&custom).unwrap();
+        fs::write(&path, json).unwrap();
+
+        let (config, warning) = Config::load_from(&path.to_path_buf());
+        assert!(warning.is_none());
+        assert_eq!(config.cluster.default_queue, "short");
+        assert_eq!(config.cluster.default_cores, 128);
+    }
+
+    #[test]
+    fn test_load_invalid_json_warns_and_uses_defaults() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.json");
+
+        // Write invalid JSON
+        let mut f = fs::File::create(&path).unwrap();
+        f.write_all(b"{ this is not valid json }").unwrap();
+
+        let (config, warning) = Config::load_from(&path.to_path_buf());
+
+        // Should warn
+        assert!(warning.is_some());
+        assert!(warning.unwrap().contains("invalid JSON"));
+
+        // Should use defaults
+        assert_eq!(config.cluster.default_queue, "long");
+        assert_eq!(config.cluster.default_cores, 64);
+
+        // Should NOT have overwritten the file
+        let content = fs::read_to_string(&path).unwrap();
+        assert_eq!(content, "{ this is not valid json }");
+    }
+
+    #[test]
+    fn test_load_missing_file_creates_default() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("config.json");
+        assert!(!path.exists());
+
+        let (config, warning) = Config::load_from(&path.to_path_buf());
+
+        // No warning for missing file
+        assert!(warning.is_none());
+
+        // Uses defaults
+        assert_eq!(config.cluster.default_queue, "long");
+
+        // Creates the file
+        assert!(path.exists());
+        let content = fs::read_to_string(&path).unwrap();
+        let parsed: Config = serde_json::from_str(&content).unwrap();
+        assert_eq!(parsed.cluster.default_queue, "long");
     }
 }

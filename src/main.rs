@@ -74,7 +74,10 @@ fn run() -> io::Result<()> {
     }
 
     // Load configuration
-    let config = Config::load();
+    let (config, config_warning) = Config::load();
+    if let Some(warning) = &config_warning {
+        eprintln!("{}", warning);
+    }
 
     // Check Python availability
     if let Err(e) = python::check_python() {

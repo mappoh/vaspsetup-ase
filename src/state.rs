@@ -165,6 +165,8 @@ pub struct AppState {
     pub cores: u32,
     /// User-chosen VASP binary (Quick Submit only; None = derive from calc_type).
     pub vasp_binary_override: Option<String>,
+    /// Error message to display on the next screen (e.g., preset load failure).
+    pub error: Option<String>,
 }
 
 impl AppState {
@@ -188,6 +190,7 @@ impl AppState {
             queue: config.cluster.default_queue.clone(),
             cores: config.cluster.default_cores,
             vasp_binary_override: None,
+            error: None,
         }
     }
 
