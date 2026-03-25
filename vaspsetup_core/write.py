@@ -121,7 +121,9 @@ def _write_potcar(atoms, directory, pp_type="pbe"):
 
     try:
         from ase.calculators.vasp import Vasp
-        calc = Vasp(pp=pp_type)
+        # Use the output directory to avoid CWD conflicts when
+        # multiple parallel jobs create Vasp calculator instances.
+        calc = Vasp(pp=pp_type, directory=directory)
         calc.initialize(atoms)
         calc.write_potcar(directory=directory)
     except Exception as exc:
