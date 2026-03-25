@@ -9,7 +9,7 @@ import urllib.request
 from pathlib import Path
 
 REPO = "mappoh/vaspsetup-ase"
-VERSION = "v0.2.1"
+VERSION = "v0.2.2"
 
 
 def _bin_dir() -> Path:
@@ -21,10 +21,15 @@ def _bin_dir() -> Path:
 
 def _find_binary() -> Path:
     """Find or download the vaspsetup binary."""
-    # 1. Check cached binary
+    # 1. Check cached binary (version-aware)
     cached = _bin_dir() / "vaspsetup"
+    version_file = _bin_dir() / "version"
     if cached.is_file() and os.access(cached, os.X_OK):
-        return cached
+        if version_file.is_file() and version_file.read_text().strip() == VERSION:
+            return cached
+        # Stale binary — remove and re-download
+        cached.unlink()
+        version_file.unlink(missing_ok=True)
 
     # 2. Check development build (cargo build)
     project_root = Path(__file__).parent.parent
@@ -83,6 +88,9 @@ def _download_binary() -> Path:
         sys.exit(1)
     finally:
         tarball.unlink(missing_ok=True)
+
+    # Record the version so upgrades invalidate the cache
+    (_bin_dir() / "version").write_text(VERSION)
 
     print(f"Installed to {dest}", file=sys.stderr)
     return dest
