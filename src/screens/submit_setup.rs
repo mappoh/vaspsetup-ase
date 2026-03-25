@@ -308,13 +308,19 @@ impl SubmitSetupScreen {
                 self.focus = idx;
                 return ScreenAction::Continue;
             }
-            // Resolve to absolute path (relative paths are based on work_dir)
+            // Resolve to absolute, canonicalized path
             let path = std::path::Path::new(&output_dir);
-            state.output_dir = if path.is_absolute() {
-                output_dir
+            let abs_path = if path.is_absolute() {
+                path.to_path_buf()
             } else {
-                state.work_dir.join(&output_dir).to_string_lossy().to_string()
+                state.work_dir.join(&output_dir)
             };
+            // Canonicalize removes ./ and ../ components; fall back to raw join
+            state.output_dir = abs_path
+                .canonicalize()
+                .unwrap_or(abs_path)
+                .to_string_lossy()
+                .to_string();
         } else {
             // Quick Submit: use work_dir
             state.output_dir = state.work_dir.to_string_lossy().to_string();
