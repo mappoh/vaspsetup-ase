@@ -44,6 +44,8 @@ pub fn render_sge_script(
          #$ -q {queue}\n\
          #$ -pe {parallel_env} {cores}\n\
          #$ -cwd\n\
+         #$ -o {work_dir}\n\
+         #$ -e {work_dir}\n\
          module load {vasp_module}\n\
          cd {work_dir}\n\
          mpirun -np $NSLOTS {vasp_cmd}\n"
@@ -166,6 +168,8 @@ mod tests {
         assert!(script.contains("#$ -N test_job"));
         assert!(script.contains("#$ -q long"));
         assert!(script.contains("#$ -pe mpi-* 64"));
+        assert!(script.contains("#$ -o /work/calc"));
+        assert!(script.contains("#$ -e /work/calc"));
         assert!(script.contains("module load vasp/6.4.0/"));
         assert!(script.contains("cd /work/calc"));
         assert!(script.contains("mpirun -np $NSLOTS vasp_std"));
