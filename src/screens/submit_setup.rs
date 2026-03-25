@@ -308,7 +308,13 @@ impl SubmitSetupScreen {
                 self.focus = idx;
                 return ScreenAction::Continue;
             }
-            state.output_dir = output_dir;
+            // Resolve to absolute path (relative paths are based on work_dir)
+            let path = std::path::Path::new(&output_dir);
+            state.output_dir = if path.is_absolute() {
+                output_dir
+            } else {
+                state.work_dir.join(&output_dir).to_string_lossy().to_string()
+            };
         } else {
             // Quick Submit: use work_dir
             state.output_dir = state.work_dir.to_string_lossy().to_string();
