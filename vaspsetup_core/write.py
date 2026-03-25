@@ -9,9 +9,9 @@ writes what it is told to write.
 import os
 import tempfile
 import shutil
-from collections import Counter
 
 from ase.io.vasp import write_vasp
+from ase.calculators.vasp import Vasp
 
 from vaspsetup_core import WriteError
 from vaspsetup_core.io import read_structure
@@ -20,13 +20,6 @@ from vaspsetup_core.io import read_structure
 # Keys in the params dict that are VASPSetup-internal, not INCAR parameters.
 # Note: GGA is a valid INCAR tag and is NOT filtered.
 _NON_INCAR_KEYS = frozenset({"pp", "kpts"})
-
-# Map pp type to pseudopotential subdirectory name.
-_PP_DIR_MAP = {
-    "pbe": "potpaw_PBE",
-    "lda": "potpaw",
-    "pw91": "potpaw_GGA",
-}
 
 
 def write_vasp_inputs(poscar_path, output_dir, params, kpts=(1, 1, 1)):
@@ -115,50 +108,22 @@ def _write_incar(params, directory):
 
 
 def _write_potcar(atoms, directory, pp_type="pbe"):
-    """Write POTCAR by concatenating per-species files from VASP_PP_PATH.
+    """Write POTCAR using ASE's Vasp calculator.
 
     Returns True if POTCAR was written, False if VASP_PP_PATH is not set.
     Raises WriteError if VASP_PP_PATH is set but a species POTCAR is missing.
     """
-    pp_path = os.environ.get("VASP_PP_PATH")
-    if not pp_path:
+    if not os.environ.get("VASP_PP_PATH"):
         return False
 
-    # Get unique species in POSCAR order
-    symbols = atoms.get_chemical_symbols()
-    species = list(Counter(symbols).keys())
-
-    # Resolve the PP subdirectory (e.g., potpaw_PBE)
-    pp_dir_name = _PP_DIR_MAP.get(pp_type.lower(), f"potpaw_{pp_type}")
-    pp_base = os.path.join(pp_path, pp_dir_name)
-
-    # Concatenate per-species POTCAR files
-    potcar_path = os.path.join(directory, "POTCAR")
-    with open(potcar_path, "w", encoding="utf-8") as out:
-        for symbol in species:
-            found = _find_species_potcar(pp_base, symbol)
-            if found is None:
-                raise WriteError(
-                    f"POTCAR not found for {symbol} in {pp_base}. "
-                    f"Check VASP_PP_PATH and species name."
-                )
-            with open(found, "r", encoding="utf-8") as f:
-                out.write(f.read())
+    try:
+        calc = Vasp(pp=pp_type)
+        calc.initialize(atoms)
+        calc.write_potcar(directory=directory)
+    except Exception as exc:
+        raise WriteError(f"Failed to write POTCAR: {exc}") from exc
 
     return True
-
-
-def _find_species_potcar(pp_base, symbol):
-    """Find the POTCAR file for a species, checking common suffixes.
-
-    Looks for: {symbol}/POTCAR, then {symbol}_pv/POTCAR, {symbol}_sv/POTCAR.
-    Returns the path if found, None otherwise.
-    """
-    for suffix in ("", "_pv", "_sv"):
-        potcar = os.path.join(pp_base, symbol + suffix, "POTCAR")
-        if os.path.isfile(potcar):
-            return potcar
-    return None
 
 
 def _write_kpoints(kpts, directory):
