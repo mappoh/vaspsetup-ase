@@ -4,7 +4,6 @@
     "PREC": "Normal",
     "GGA": "PE",
     "EDIFF": 1e-06,
-    "NELM": 200,
     "IBRION": 1,
     "NSW": 500,
     "ISIF": 2,
