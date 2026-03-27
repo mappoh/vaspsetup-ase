@@ -18,7 +18,7 @@ use std::process;
 use crossterm::{
     cursor,
     execute,
-    terminal::{disable_raw_mode, enable_raw_mode, Clear, ClearType, DisableLineWrap, EnableLineWrap},
+    terminal::{disable_raw_mode, enable_raw_mode, DisableLineWrap, EnableLineWrap},
 };
 use ratatui::backend::CrosstermBackend;
 use ratatui::{Terminal, TerminalOptions, Viewport};
@@ -114,15 +114,16 @@ fn run() -> io::Result<()> {
     let mut app = App::new(state, config);
     let exit_reason = app.run(&mut terminal);
 
-    // Move cursor up to the start of the viewport area, clear it, then restore terminal
+    // Restore terminal: let ratatui clean up the inline viewport,
+    // then disable raw mode and re-enable line wrap + cursor
+    let _ = terminal.clear();
+    drop(terminal);
+    let _ = disable_raw_mode();
     let _ = execute!(
         io::stdout(),
-        cursor::MoveUp(viewport_height),
-        Clear(ClearType::FromCursorDown),
         cursor::Show,
         EnableLineWrap
     );
-    let _ = disable_raw_mode();
 
     // Print summary after TUI cleanup
     match exit_reason? {
