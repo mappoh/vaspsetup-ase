@@ -420,7 +420,7 @@ impl App {
         if let Some(magmom) = self.state.magmom_string() {
             params.insert("MAGMOM".to_string(), serde_json::Value::String(magmom));
         }
-        let multi_file = file_indices.len() > 1;
+
 
         // Prepare per-job data (job_name, file_path, output_dir)
         let jobs: Vec<_> = file_indices
@@ -434,11 +434,8 @@ impl App {
                     .cloned()
                     .unwrap_or_else(|| format!("vaspsetup_{:02}", i + 1));
 
-                let output_dir = if multi_file {
-                    format!("{}/{}", base_output_dir, job_name)
-                } else {
-                    base_output_dir.clone()
-                };
+                // Always create a subdirectory per job (e.g., tn-lp-09/)
+                let output_dir = format!("{}/{}", base_output_dir, job_name);
 
                 let file_path = self
                     .state
