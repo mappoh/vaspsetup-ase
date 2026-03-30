@@ -114,16 +114,18 @@ fn run() -> io::Result<()> {
     let mut app = App::new(state, config);
     let exit_reason = app.run(&mut terminal);
 
-    // Restore terminal: let ratatui clean up the inline viewport,
-    // then disable raw mode and re-enable line wrap + cursor
-    let _ = terminal.clear();
-    drop(terminal);
+    // Restore terminal state
     let _ = disable_raw_mode();
     let _ = execute!(
         io::stdout(),
         cursor::Show,
         EnableLineWrap
     );
+    // Drop the terminal — for Inline viewport, ratatui scrolls content up
+    // and positions cursor below the viewport area
+    drop(terminal);
+    // Ensure shell prompt starts on a fresh line
+    println!();
 
     // Print summary after TUI cleanup
     match exit_reason? {
