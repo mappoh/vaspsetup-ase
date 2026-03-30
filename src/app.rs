@@ -285,6 +285,10 @@ impl App {
             ActiveScreen::SpinMode => {
                 // Load preset for the selected calc type (or TST method)
                 self.load_preset();
+                // Set ISPIN based on spin mode selection
+                if self.state.spin_mode == Some(SpinMode::Unrestricted) {
+                    self.state.incar_params.insert("ISPIN".to_string(), serde_json::json!(2));
+                }
                 // For TST with NEB/CI-NEB: auto-detect IMAGES from subdirectories
                 if self.is_tst_flow() {
                     if let Some(ref method) = self.state.tst_method {
