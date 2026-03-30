@@ -15,6 +15,7 @@ pub enum CalcType {
     Pdos,
     ChargeDensity,
     Orbital,
+    Elf,
     Tst,
 }
 
@@ -30,6 +31,7 @@ impl CalcType {
             CalcType::Pdos => "pdos",
             CalcType::ChargeDensity => "charge_density",
             CalcType::Orbital => "orbital",
+            CalcType::Elf => "elf",
             CalcType::Tst => "neb", // default; overridden by TstMethod
         }
     }
@@ -44,6 +46,7 @@ impl CalcType {
             CalcType::Pdos => "PDOS",
             CalcType::ChargeDensity => "Charge Density",
             CalcType::Orbital => "Orbital",
+            CalcType::Elf => "ELF",
             CalcType::Tst => "Transition State",
         }
     }
@@ -66,6 +69,7 @@ impl CalcType {
             CalcType::Pdos,
             CalcType::ChargeDensity,
             CalcType::Orbital,
+            CalcType::Elf,
             CalcType::Tst,
         ]
     }
@@ -300,7 +304,7 @@ mod tests {
 
     #[test]
     fn test_calc_type_all_count() {
-        assert_eq!(CalcType::all().len(), 8);
+        assert_eq!(CalcType::all().len(), 9);
     }
 
     #[test]

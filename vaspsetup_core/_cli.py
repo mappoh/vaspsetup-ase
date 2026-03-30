@@ -9,7 +9,7 @@ import urllib.request
 from pathlib import Path
 
 REPO = "mappoh/vaspsetup-ase"
-VERSION = "v0.2.13"
+VERSION = "v0.2.14"
 
 
 def _bin_dir() -> Path:

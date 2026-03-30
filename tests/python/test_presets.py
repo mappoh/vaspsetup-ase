@@ -12,6 +12,7 @@ EXPECTED_PRESETS = [
     "charge_density",
     "ci_neb",
     "dimer",
+    "elf",
     "frequency",
     "geometry_opt",
     "neb",
