@@ -1,6 +1,6 @@
 [package]
 name = "vaspsetup"
-version = "0.2.12"
+version = "0.2.13"
 edition = "2021"
 description = "VASP calculation setup and submission TUI"
 

@@ -285,10 +285,6 @@ impl App {
             ActiveScreen::SpinMode => {
                 // Load preset for the selected calc type (or TST method)
                 self.load_preset();
-                // Set ISPIN based on spin mode selection
-                if self.state.spin_mode == Some(SpinMode::Unrestricted) {
-                    self.state.incar_params.insert("ISPIN".to_string(), serde_json::json!(2));
-                }
                 // For TST with NEB/CI-NEB: auto-detect IMAGES from subdirectories
                 if self.is_tst_flow() {
                     if let Some(ref method) = self.state.tst_method {
@@ -317,6 +313,10 @@ impl App {
                 // Always reload atom info from the selected file to ensure
                 // species data matches what the user actually selected in FilePick
                 self.load_atom_info_for_selected();
+                // Set ISPIN=2 for unrestricted spin (after preset loaded, before showing INCAR)
+                if self.state.spin_mode == Some(SpinMode::Unrestricted) {
+                    self.state.incar_params.insert("ISPIN".to_string(), serde_json::json!(2));
+                }
                 self.edit_incar = screens::edit_incar::EditIncarScreen::new(&self.state);
                 self.state.error = None; // Clear after screen picks it up
             }
